@@ -1,0 +1,2 @@
+<?xml version = '1.0' encoding = 'utf-8'?>
+<cache mode="complete" idcache="200" ><service name="MSD" ><network main="true" name="ethernet" ><attr name="url" /><attr name="port" >15150</attr></network><network main="true" name="bluetooth" ><attr name="url" /><attr name="port" >-1</attr></network><network name="bridge" ><network name="ethernet" /><network name="bluetooth" /></network></service></cache>

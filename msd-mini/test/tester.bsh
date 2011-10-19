@@ -1,0 +1,51 @@
+/* This files uses BeanShell to test the capabilities of the
+ * BluetoothNetworkManager.
+ * Run
+ * - make; make tester
+ * and from the command line of bsh
+ * - source("../tester.bsh")
+ * You can now send unicast messages to rick:
+ * - net.sendU(m,rick,-1);
+ * Or get a virtual connection to send and receive messages: 
+ * - (client) c=net.getConnection(0,idmarisa,idrick,rick,-1);
+ * - (server) c=tester.getRemoteConnection();
+ * - (client) c.send(m);
+ * - (server) m=c.receive(); c.send(m);
+ * - (cliente) m=c.receive(); c.close();
+ * Or send a multicast Message:
+ * - net.sendM(new Message(1,idmarisa,null)); */
+
+/* The packages */
+import org.msd.proxy.*;
+import org.msd.cache.*;
+import org.msd.comm.*;
+
+/* The identifiers */
+idrick="200";
+idmarisa="100";
+idclapton="300";
+marisa="btspp://0009DD10187F:6";
+clapton="btspp://0009DD10860E:6";
+rick="btspp://001060A649E7:6";
+
+/* The main objects */
+tester=new MSDTester(idmarisa);
+msd=tester.getMSDManager();
+cache=msd.getCache();
+net=msd.getNetworks().get("bluetooth");
+
+/* Update the cache  with the MSDs */
+/*s=new Service(cache,true); s.setName("MSD"); s.setIDCache(idrick);
+n=new Network(cache,false); 
+n.setName("bluetooth"); n.setURL(rick); n.setIDCache("");
+s.appendChild(n);
+s=new Service(cache,true); s.setName("MSD"); s.setIDCache(idmarisa);
+n=new Network(cache,false);
+n.setName("bluetooth"); n.setURL(marisa); n.setIDCache("");
+s.appendChild(n);
+s=new Service(cache,true); s.setName("MSD"); s.setIDCache(idclapton);
+n=new Network(cache,false); 
+n.setName("bluetooth"); n.setURL(clapton); n.setIDCache("");
+s.appendChild(n); */
+
+m=new Message("hola".getBytes(),idmarisa,idrick,1);

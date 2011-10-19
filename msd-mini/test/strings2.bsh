@@ -1,0 +1,150 @@
+
+import org.msd.cache.*;
+import java.io.*;
+
+cache=new Cache("1");
+s=new Service(cache,true);
+s.setName("MSD");
+s.setGateway("2");
+s2=new Service(cache,true);
+s2.setName("MSD2");
+s3=new Service(cache,true);
+s3.setName("MSD3");
+n=new Network(cache,false);
+n.setName("bluetooth");
+n.setURL("btspp:123456");
+s.appendChild(n);
+s2.appendChild(n);
+n2=n.clone();
+n2.setName("ethernet");
+n2.setURL("http://12345");
+n2.setPort(15);
+s.appendChild(n2);
+
+
+    class StringTokenizer{
+        private int p=0;
+        private String sep=null;
+        private String s;
+	private boolean end=false;
+        public StringTokenizer(String s,String sep){
+            this.s=s;
+            this.sep=sep;
+	    p=0;
+        }
+
+        public String nextToken(){
+		if(p>=s.length()||p<0){
+			end=true;
+			return null;
+		}
+		int a=p;
+		String next=null;
+		p=s.indexOf(sep,p);
+		if(p==0){
+			p=p+sep.length();
+			return nextToken();
+		}
+		if(p==-1){
+			next=s.substring(a,s.length());
+			end=true;
+		}else{
+			next=s.substring(a,p);
+			p=p+sep.length();
+		}
+		return next;
+        }
+
+        public boolean hasMoreTokens(){
+            return !end;
+        }
+    }
+
+    Service createElementFromXML(String xml) throws Exception{
+
+            int main=xml.indexOf("service");
+            if(main>-1){
+                int p1=xml.indexOf(" idcache=\"",main);
+		p1+=10;
+                int p2=xml.indexOf("\"",p1);
+                String idcache=xml.substring(p1,p2);
+		
+                p1=xml.indexOf(" id=\"",main);
+		p1+=5;
+                int p2=xml.indexOf("\"",p1);
+                String id=xml.substring(p1,p2);
+
+                p1=xml.indexOf(" name=\"",main);
+		p1+=7;
+                int p2=xml.indexOf("\"",p1);
+                String name=xml.substring(p1,p2);
+
+		Service s=new Service(cache,false);
+		s.setName(name);
+		s.setIDCache(idcache);
+		s.setID(id);
+
+                p1=xml.indexOf(" gw=\"",main);
+		if(p1>-1){
+			p1+=5;
+        	        int p2=xml.indexOf("\"",p1);
+                	String gw=xml.substring(p1,p2);
+			s.setGateway(gw);
+		}
+
+		main=xml.indexOf("<network",main);
+		while(main>-1){
+			int end=xml.indexOf("</network",main);
+			Network n=new Network(cache,false);
+
+                	p1=xml.indexOf(" name=\"",main);
+			if(p1<end && p1>-1){
+				p1+=7;
+        		        int p2=xml.indexOf("\"",p1);
+                		name=xml.substring(p1,p2);
+				n.setName(name);
+			}
+
+                	p2=xml.indexOf(" name=\"url\"",main);
+	                p1=xml.indexOf(">",p2);
+        	        p2=xml.indexOf("<",p1);
+                	String url=xml.substring(p1+1,p2);
+			n.setURL(url);
+
+                	p2=xml.indexOf(" name=\"port\"",main);
+			if(p2>-1 && p2<end){
+		                p1=xml.indexOf(">",p2);
+        		        p2=xml.indexOf("<",p1);
+				int p=Integer.parseInt(xml.substring(p1+1,p2));
+				n.setPort(p);
+			}
+
+			s.appendChild(n);
+			main++;
+			main=xml.indexOf("<network",main);
+		}
+
+		return s;
+	}else{
+		throw new Exception("Not a service");
+	}
+    }
+
+    Cache load(String c) throws Exception{
+    	cache2=new Cache();
+        int p1=c.indexOf(" idcache=\"");
+	p1+=10;
+        int p2=c.indexOf("\"",p1);
+        String idcache=c.substring(p1,p2);
+	cache2.setID(idcache);
+
+	StringTokenizer st=new StringTokenizer(c,"</service>");
+	while(st.hasMoreTokens()){
+		t=st.nextToken();
+		try{
+			cache2.addElement(createElementFromXML(t));
+		}catch(Exception e){
+		}
+	}
+	return cache2;
+    }

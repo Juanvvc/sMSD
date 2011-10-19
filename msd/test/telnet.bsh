@@ -1,0 +1,76 @@
+import java.io.*;
+import java.net.*;
+
+
+void useTelnet(in,out){
+            new ReadTelnet(in);
+            // IAC DO ECO
+            out.write(new byte[]{(byte)0xff,(byte)0xfd,(byte)0x01});
+	    out.flush();
+    }
+
+    /** Read the telnet protocol from an input stream. */
+    private class ReadTelnet implements Runnable{
+        private InputStream in;
+        /** @param in Start reading telnet protocol from this stream */
+        public ReadTelnet(InputStream in){
+            this.in=in;
+            Thread t=new Thread(this);
+            t.start();
+        }
+        /** */
+        public void run(){
+            try{
+                byte[] buffer=new byte[256];
+                while(true){
+                    int r=in.read(buffer);
+
+                    for(int i=0;i<r;i++){
+                        // ignore NULL
+                        if(buffer[i]==0){
+                            continue;
+                        }
+                        if(buffer[i]==(byte)0xff){
+                            // special command
+                            switch(buffer[i+1]){
+                            case(byte)0xfd:
+                            case(byte)0xfe:
+                                // WON'T any option
+                                byte[] resp={(byte)0xff,(byte)0xfc,buffer[i+2]};
+                                out.write(resp);
+                                out.flush();
+                                i+=2;
+                                break;
+                            case(byte)0xfb:
+                            case(byte)0xfc:
+                                // ignore WILL and WON'T
+                                i+=2;
+                                break;
+                            default:
+                                // ignore any other command
+                                i+=1;
+                            }
+                        } else{
+                            // normal byte to be written
+                            byte[] b={buffer[i]};
+                            System.out.print(new String(b));
+                        }
+                    }
+                }
+            } catch(Exception e){
+                // after any error, close the stream
+                try{
+                    in.close();
+                } catch(Exception e2){
+                }
+                e.printStackTrace();
+            }
+        }
+    }
+/*
+con=new Socket(InetAddress.getByName("bowie.upc.es"),15151);
+in=con.getInputStream();
+out=con.getOutputStream();
+useTelnet(in,out);
+*/
+

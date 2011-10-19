@@ -1,0 +1,5 @@
+#!/bin/bash
+# Run test on Beanshell.
+# Use: change the path to the home of BeanShell (remember last :$1).
+# bsh $CLASSPATH
+java -classpath /usr/share/java/bsh-2.0b2.jar:$1 bsh.Console

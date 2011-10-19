@@ -1,0 +1,857 @@
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
+\textclass scrartcl
+\language english
+\inputencoding auto
+\fontscheme default
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize Default
+\paperpackage a4
+\use_geometry 0
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+Tutorial: MSD platform in applications
+\layout Author
+
+Juan Vera del Campo, juanvvc@etsit.upm.es
+\layout Abstract
+
+This tutorial briefly explains how to use the MSD libraries in an application,
+ focusing in the medium version and providing with examples.
+ It is assumend a complete and properly configured version of the MSD platform
+ is running in the networks.
+\layout Abstract
+
+
+\begin_inset LatexCommand \tableofcontents{}
+
+\end_inset 
+
+
+\layout Section
+
+The objective
+\layout Standard
+
+We are going to develop an echo service.
+ Both server and clients will use the MSD platform to register and search
+ the echo service.
+ It is assumed an MSD is running as a daemon in the same device that the
+ server with an Ethernet network, and the client has access to an MSD in
+ its Bluetooth network.
+ The details of the complete MSD network or its configuration are irrelevant
+ to this tutorial.
+\layout Standard
+
+In an echo service the client sends an string to the server and gets the
+ same string returned.
+ The MSD library 
+\emph on 
+msd-medium.jar
+\emph default 
+ is used to connect to the MSD platform in both clients and server.
+\layout Section
+
+Configuring the library
+\layout Standard
+
+Both server and clients have to start and configure an instance of the MSD
+ library.
+ For the client (connecting to an unknown MSD in its Bluetooth network)
+ the code is:
+\layout LyX-Code
+
+...
+\layout LyX-Code
+
+msd=new MSDManagerMedium();
+\layout LyX-Code
+
+msd.init();
+\layout LyX-Code
+
+msd.addMSDListener(this);
+\layout LyX-Code
+
+msd.initNet(new NetConfig(
+\begin_inset Quotes eld
+\end_inset 
+
+bluetooth
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+...
+\layout Standard
+
+The client will use a Bluetooth network with the default values, enough
+ for this kind of networks and it will search inside its network for the
+ main MSD of the network, a complete version of the library.
+ The server (connecting to a local MSD in its Ethernet interface) its configured
+ with:
+\layout LyX-Code
+
+...
+\layout LyX-Code
+
+msd=new MSDManagerMedium();
+\layout LyX-Code
+
+msd.init();
+\layout LyX-Code
+
+msd.addMSDListener(this);
+\layout LyX-Code
+
+NetConfig net=new NetConfig(
+\begin_inset Quotes eld
+\end_inset 
+
+ethernet
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+net.setMSDAddress(new Address("127.0.0.1",15150));
+\layout LyX-Code
+
+net.setMulticastAddress(null);
+\layout LyX-Code
+
+net.setLocalAddress(new Address(null,0));
+\layout LyX-Code
+
+msd.initNet(net);
+\layout LyX-Code
+
+...
+\layout Standard
+
+The configuration of the server is a bit longer: it is in a network called
+ 
+\emph on 
+ethernet
+\emph default 
+ but the default values are not valid for our purposes.
+ The multicast address is set to 
+\emph on 
+null
+\emph default 
+ and the MSD-address to a local one since we are going to use a local connection
+ to an MSD inside our own device (this complete MSD acting as daemon does
+ not need to be a main one) and we are not going to search for the main
+ MSD of the network (neither multicasting is required nor desired since
+ there is a complete MSD in our device using the needed ports).
+ The local address is set to 
+\emph on 
+new Address(null,0)
+\emph default 
+: the null means 
+\emph on 
+
+\begin_inset Quotes eld
+\end_inset 
+
+try to guess my IP
+\begin_inset Quotes erd
+\end_inset 
+
+
+\emph default 
+, and this is OK for devices with just one ethernet interface, and the 0
+ means 
+\emph on 
+
+\begin_inset Quotes eld
+\end_inset 
+
+use whatever free port
+\begin_inset Quotes erd
+\end_inset 
+
+
+\emph default 
+.
+\layout Standard
+
+Both client ans server will be ready to look for services or register them
+ just after the first 
+\emph on 
+UPDATE
+\emph default 
+ event from the library.
+ In the class implementing the 
+\emph on 
+MSDListener
+\emph default 
+:
+\layout LyX-Code
+
+public void event(MSDEvent e){
+\layout LyX-Code
+
+   switch(e.getType()){
+\layout LyX-Code
+
+   case MSDEvent.UPDATE:
+\layout LyX-Code
+
+      <If it is the first time, here goes the code
+\layout LyX-Code
+
+       for registering or searching the service>
+\layout LyX-Code
+
+      break;
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+}
+\layout Section
+
+The server.
+\layout Standard
+
+The server registers its service in the MSD platform using the MSD medium
+ library and accepts connections from remote clients.
+ This code will register the service:
+\layout LyX-Code
+
+...
+\layout LyX-Code
+
+service=new Service(msd.getCache(),false);
+\layout LyX-Code
+
+service.setName(
+\begin_inset Quotes eld
+\end_inset 
+
+echo
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+msd.registerService(service,<MSDLocalServiceListener>)
+\layout LyX-Code
+
+...
+\layout Standard
+
+The local service listener must implements a couple of methods.
+ Let's assume our server accepts connections from every client.
+\layout LyX-Code
+
+\layout LyX-Code
+
+public boolean canConnect(Connection c){
+\layout LyX-Code
+
+   return true;
+\layout LyX-Code
+
+}
+\layout LyX-Code
+
+public void use(Connection c){
+\layout LyX-Code
+
+   try{
+\layout LyX-Code
+
+      c.sendBytes(c.receiveBytes());
+\layout LyX-Code
+
+      c.close();
+\layout LyX-Code
+
+   }catch(Exception ex){
+\layout LyX-Code
+
+      ex.printStackTrace();
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+}
+\layout LyX-Code
+
+\layout Standard
+
+Before closing the server, the MSD library have to be finished with 
+\emph on 
+msd.finish().
+
+\emph default 
+ Notice that the 
+\emph on 
+finish()
+\emph default 
+ method will deregister automatically the service.
+ If you plan to use the MSD platform longer but don't want to keep offering
+ the service, use the 
+\emph on 
+msd.deregisterService(service.getID())
+\emph default 
+ method instead.
+ Keep in mind that if you call to 
+\emph on 
+deregisterService()
+\emph default 
+ method just before 
+\emph on 
+finish()
+\emph default 
+, you will get a warning in the complete MSD that can be safely ignored.
+\layout Section
+
+The client
+\layout Standard
+
+The client looks for a server offering the service and connects to it.
+ It has a very simple code:
+\layout LyX-Code
+
+...
+\layout LyX-Code
+
+Service service=new Service(msd.getCache(),false);
+\layout LyX-Code
+
+service.setName(
+\begin_inset Quotes eld
+\end_inset 
+
+echo
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+Vector v=msd.searchService(service,false);
+\layout LyX-Code
+
+service=(Service)v.elementAt(0);
+\layout LyX-Code
+
+Connection c=msd.useConnected(service);
+\layout LyX-Code
+
+c.sendBytes(
+\begin_inset Quotes erd
+\end_inset 
+
+Hello world!
+\begin_inset Quotes erd
+\end_inset 
+
+.getBytes());
+\layout LyX-Code
+
+System.out.println(new String(c.receiveBytes()));
+\layout LyX-Code
+
+...
+\layout Standard
+
+And that's all.
+ The client is getting the first server of the vector returned by 
+\emph on 
+searchService()
+\emph default 
+.
+ In a real client, there will be a filtering of the servers to the nearest,
+ more secure, faster, or whatever other user-defined filter.
+\layout Standard
+
+Notice the 
+\emph on 
+false
+\emph default 
+ flag in 
+\emph on 
+msd.searchService()
+\emph default 
+.
+ It is used to search the cache of services inside the main MSD in the network,
+ not the local cache of the library.
+ If an application shares the same cache between the server and the client,
+ the service can be registered in the local cache 
+\noun on 
+before
+\noun default 
+ being seen by the main MSD of the network, especially if the client is
+ started just after the server.
+ In such cases (server and client in the same application) can be useful
+ a code like the following in the client:
+\layout LyX-Code
+
+...
+\layout LyX-Code
+
+Vector v=msd.searchService(service,true);
+\layout LyX-Code
+
+v.addAll(msd.searchService(service,false));
+\layout LyX-Code
+
+...
+\layout Standard
+
+Servers and clients with a more complex services can use 
+\emph on 
+Messages
+\emph default 
+ or even standard input/output streams to connect the service.
+ Read the JavaDoc of the 
+\emph on 
+org.msd.comm.Connection
+\emph default 
+ and o
+\emph on 
+rg.msd.comm.TransformConnection
+\emph default 
+ classes for details about how to use 
+\emph on 
+Connections
+\emph default 
+.
+\layout Section
+
+The code
+\layout Standard
+
+In this section the whole code of the client and server is provided.
+\layout LyX-Code
+
+import org.msd.proxy.*;
+\layout LyX-Code
+
+import org.msd.cache.Service;
+\layout LyX-Code
+
+import org.msd.comm.*;
+\layout LyX-Code
+
+\layout LyX-Code
+
+public class Server implements MSDListener, MSDLocalServiceListener{
+\layout LyX-Code
+
+   private MSDManagerMedium msd=null;
+\layout LyX-Code
+
+   private Service service=null;
+\layout LyX-Code
+
+   public static void main(String args[]){
+\layout LyX-Code
+
+      new Server();
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   // Init the MSDManager
+\layout LyX-Code
+
+   public Server(){
+\layout LyX-Code
+
+      try{
+\layout LyX-Code
+
+         msd=new MSDManagerMedium();
+\layout LyX-Code
+
+         msd.init();
+\layout LyX-Code
+
+         msd.addMSDListener(this);
+\layout LyX-Code
+
+         NetConfig net=new NetConfig(
+\begin_inset Quotes eld
+\end_inset 
+
+ethernet
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+         net.setMSDAddress(new Address(
+\begin_inset Quotes eld
+\end_inset 
+
+127.0.0.1
+\begin_inset Quotes erd
+\end_inset 
+
+,15150));
+\layout LyX-Code
+
+         net.setMulticastAddress(null);
+\layout LyX-Code
+
+         net.setLocalAddress(null,0);
+\layout LyX-Code
+
+         msd.initNet(net);
+\layout LyX-Code
+
+      }catch(Exception e){
+\layout LyX-Code
+
+         e.printStackTrace();
+\layout LyX-Code
+
+      }
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   // After an UPDATE, register the service and get ready
+\layout LyX-Code
+
+   public void event(MSDEvent e){
+\layout LyX-Code
+
+      switch(e.getType()){
+\layout LyX-Code
+
+      case MSDEvent.UPDATED:
+\layout LyX-Code
+
+         if(service==null)
+\layout LyX-Code
+
+            try{
+\layout LyX-Code
+
+               service=new Service(msd.getCache(),false);
+\layout LyX-Code
+
+               service.setName(
+\begin_inset Quotes eld
+\end_inset 
+
+echo
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+               msd.registerService(service,this);
+\layout LyX-Code
+
+            }catch(Exception ex){
+\layout LyX-Code
+
+               ex.printStackTrace();
+\layout LyX-Code
+
+            }
+\layout LyX-Code
+
+      }
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   // Let every client to connect
+\layout LyX-Code
+
+   public boolean canConnect(Connection c){
+\layout LyX-Code
+
+      return true;
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   // The service
+\layout LyX-Code
+
+   public void use(Connection c){
+\layout LyX-Code
+
+      try{
+\layout LyX-Code
+
+         c.sendBytes(c.receiveBytes());
+\layout LyX-Code
+
+         c.close();
+\layout LyX-Code
+
+         // exit
+\layout LyX-Code
+
+         msd.finish();
+\layout LyX-Code
+
+         System.exit(0);
+\layout LyX-Code
+
+      }catch(Exception ex){
+\layout LyX-Code
+
+         ex.printStackTrace();
+\layout LyX-Code
+
+      }
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+}
+\layout LyX-Code
+
+\layout LyX-Code
+
+import org.msd.proxy.*;
+\layout LyX-Code
+
+import org.msd.cache.Service;
+\layout LyX-Code
+
+import org.msd.comm.*;
+\layout LyX-Code
+
+import java.util.Vector;
+\layout LyX-Code
+
+\layout LyX-Code
+
+public class Client implements MSDListener{
+\layout LyX-Code
+
+   private MSDManagerMedium msd=null;
+\layout LyX-Code
+
+   public static void main(String args[]){
+\layout LyX-Code
+
+      new Client();
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   // Init the MSDManager
+\layout LyX-Code
+
+   public Client(){
+\layout LyX-Code
+
+      try{
+\layout LyX-Code
+
+         msd=new MSDManagerMedium();
+\layout LyX-Code
+
+         msd.init();
+\layout LyX-Code
+
+         msd.addMSDListener(this);
+\layout LyX-Code
+
+         msd.initNet(new NetConfig(
+\begin_inset Quotes eld
+\end_inset 
+
+bluetooth
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+      }catch(Exception e){
+\layout LyX-Code
+
+         e.printStackTrace();
+\layout LyX-Code
+
+      }
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   // After an UPDATE, use the service
+\layout LyX-Code
+
+   public void event(MSDEvent e){
+\layout LyX-Code
+
+      switch(e.getType()){
+\layout LyX-Code
+
+      case MSDEvent.UPDATED:
+\layout LyX-Code
+
+         try{
+\layout LyX-Code
+
+            Service service=new Service(msd.getCache(),false);
+\layout LyX-Code
+
+            service.setName(
+\begin_inset Quotes eld
+\end_inset 
+
+echo
+\begin_inset Quotes erd
+\end_inset 
+
+);
+\layout LyX-Code
+
+            Vector v=msd.searchService(service,false);
+\layout LyX-Code
+
+            service=(Service)v.elementAt(0);
+\layout LyX-Code
+
+            Connection c=msd.useConnected(service);
+\layout LyX-Code
+
+            c.sendBytes(
+\begin_inset Quotes eld
+\end_inset 
+
+Hello world!
+\begin_inset Quotes erd
+\end_inset 
+
+.getBytes());
+\layout LyX-Code
+
+            System.out.println(new String(c.receiveBytes()));
+\layout LyX-Code
+
+            msd.finish();
+\layout LyX-Code
+
+            System.exit(0);
+\layout LyX-Code
+
+         }catch(Exception ex){
+\layout LyX-Code
+
+            ex.printStackTrace();
+\layout LyX-Code
+
+         }
+\layout LyX-Code
+
+      }
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+   public MSDManager getMSD(){
+\layout LyX-Code
+
+      return msd;
+\layout LyX-Code
+
+   }
+\layout LyX-Code
+
+}
+\layout Section
+
+The mini version of the library
+\layout Standard
+
+The mini version has been developed for little devices running J2ME MIDP
+ 2 CLDC 1.0, although it can be compiled and used by other Java virtual machines
+ or configurations as well.
+ Compared to the medium version, the mini version 
+\noun on 
+can not:
+\layout Enumerate
+
+register or deregister services.
+ It does not provide neither 
+\emph on 
+registerService()
+\emph default 
+ nor 
+\emph on 
+deregisterService()
+\emph default 
+ methods.
+\layout Enumerate
+
+use other networks or configurations appart from those hardcoded in 
+\emph on 
+init()
+\emph default 
+ method of the MSDManagerMini.
+ It does not provide an 
+\emph on 
+initNet()
+\emph default 
+ method.
+\layout Enumerate
+
+offer any kind security.
+\layout Standard
+
+The first point prevents us from writing a server using the mini version
+ of the library.
+ The third point has no use in our example.
+ In the client above, the line 
+\emph on 
+msd.initNet(new NetConfig(
+\begin_inset Quotes eld
+\end_inset 
+
+bluetooth
+\begin_inset Quotes erd
+\end_inset 
+
+));
+\emph default 
+ has to be commented and the code can be used with the mini version of the
+ library since the default configuration of the Bluetooth network is OK.
+\the_end

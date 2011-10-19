@@ -1,0 +1,29 @@
+import org.msd.proxy.*;
+import org.msd.cache.*;
+import org.msd.comm.*;
+
+TimeManager.getTimeManager().start();
+
+msd=new MSDManagerMedium();
+msd.init();
+cache=msd.getCache();
+
+s=new Service(cache,false);
+s.setName("desoxi");
+
+class LocalServer implements MSDLocalServiceListener{
+	public boolean canConnect(Connection c){
+		System.out.println("Connection from "+c.getIDFrom());
+		return true;
+	}
+	public void use(Connection c){
+		System.out.println("Used");
+		try{
+			c.close();
+		}catch(Exception e){
+			System.err.println("Exception while closing: "+e);
+		}
+	}
+}
+
+msd.registerService(s, new LocalServer());

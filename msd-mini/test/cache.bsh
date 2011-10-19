@@ -1,0 +1,14 @@
+import org.msd.cache.*;
+
+cache=new Cache("1");
+
+s=new Service(cache,true);
+s.setName("prueba");
+s.setGateway("100");
+s.setAttrStr("description","A description");
+n=new Network(cache,false);
+n.setName("bluetooth");
+n.setMain(true);
+n.setURL("btspp://123456789");
+s.appendChild(n);
+

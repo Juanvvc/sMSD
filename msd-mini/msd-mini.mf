@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+MicroEdition-Configuration: CLDC-1.0
+MIDlet-Name: msd
+Created-By: 1.5.0 (Sun Microsystems Inc.)
+MIDlet-Vendor: UPC
+MIDlet-1: MSD printer, msd.png, org.msd.MSDPrinter
+MIDlet-2: MSD images, msd.png, org.msd.ImageClientMini
+MIDlet-Version: 1.0
+MicroEdition-Profile: MIDP-2.0

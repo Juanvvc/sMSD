@@ -1,0 +1,235 @@
+This folder includes the sources to construct the Multi Service
+Discovery System including SLP and SDP proxies and security issues.
+
+This system are still under active development!
+None of these files are in a final version at all!
+
+The webpage of the project is at http://rick.upc.es 
+
+* Download
+
+Last version (can be unstable):
+
+export CVSROOT=":pserver:anonymous@rick.upc.es:/usr/local/share/cvsrep"
+cvs login
+(Use an empty password for anonymous user)
+cvs co msd
+
+Important releases:
+
+(download them using cvs co -r RELEASE msd)
+
+presentacion: version of the code during the presentation on May, 14th 2005 at
+	the UPC, Barcelona (Spain)
+paderborn: version of the code during the meeting of Ubisec on June, 1st
+	2005 at Paderborn (Germany)
+
+* Quick instructions: compile and run!
+
+make; cd dist; ./browserSD text -o +conf
+
+Configure the MSD (or just press Ok) and press "Update" button.
+
+* Compiling 
+
+The development environment is mainly Netbeans 4, although it is not
+strictly needed to compile and run the project. JBuilder 2005
+Foundation has been also tested.
+
++ Netbeans or JBuilder 2005:
+The process of configuring both development environments is very
+similar. Try to open the project in Netbeans or JBuilder 2005. If it does not
+work, try:
+
+- Start a new project in Proxy directory and set src directory as
+  source path.
+- Set ISO8859-1 as the encoding of the source files. Since we are
+  moving the sources to English, encoding is no longer important (any
+  one byte ASCII compliant should work: ISO8859-1 and 15, UTF-8...).
+  Read Encoding section below.
+- Set the Java development kit suitable for the system (1.4.2. The
+  code lines for JDK 1.5 are not always tested). In the properties of
+  the project, set this JDK as the active.
+- For Netbeans, edit the file
+  $(Proxy)/nbproject/private/private.properties and set work.dir to
+  the complete Proxy's home ($Proxy). Please, do not commit this file
+  to the CVS. If Netbeans still is not able to find the libraries
+  after this change, remove every Jar file in project
+  properties->build->classpath and add every Jar file in $(Proxy)/libs
+  directory.
+- In JBuilder, add every file in libs to the Library path of the
+  project.
+- Add etc directory to the Classpath. In Netbeans, add as a Jar file.
+  In JBuilder, set "-classpath $(Classpath)$(ProjectDir)/etc" as the
+  VM options in execution properties.
+- Set $(Proxy)/dist as the working directory. If you can't, make a
+  symbolic link or copy the directory $(Proxy)/etc/conf to
+  $(Proxy)/conf 
+
+To compile the sources from the command line, two methods are provided:
+
+- Windows and *nix: build.xml for Apache-ant. It needs a well
+  configured Netbeans as described above. Run "ant compile" and "ant
+  javadoc". In *nix, after compiling change dist/browserSD permissions
+  to executable file.
+- *nix: Makefile for GNU-Make. Run "make" and "make javadoc". Read the
+  header of that file to enable several configurations.
+- Windows: Makefile for GNU-Make. Run "make -f Makefile.win". Due to a
+  strange bug, after compiling under Windows run "move Proxy.jar
+  dist".
+
+* Running
+
+- Before running
+Make sure there is an SLP server available in the network offering
+services.  In *nix with OpenSLP, a server must run slpd and have
+opened 427 TCP/UDP port. Test SLP from any *nix box with OpenSLP with
+the command:
+	slptool findsrvtypes
+If you don't get a response, please read your SLP server instructions.
+
+Make sure there is a Bluetooth device connected to the computer.
+Configure the system to get it working. Likely, it includes getting hciX
+connected.  Read the instructions for your system. For Linux with BlueZ,
+you can test Bluetooth with the commands:
+	hciconfig	--> there should be a response
+        hcitool scan    --> there should be at least one external device
+
+- Windows
+Support for Bluetooth under Windows is a bit more complex. The
+libraries included (BlueCove) are still in alpha state in SourceForge.
+Use the modified ones in our web (http://rick.upc.es) or include in
+the Classpath any Bluetooth library for Java JSR82-compliant.
+
+To run the proxies in Windows, just run dist/browserSD.bat. Modify this
+file by hand if you need special parameters.
+
+- Linux
+Under Linux, we are using the Bluetooth library from Avetana
+(www.avetana.de), the original sources available from Sourceforge.
+We have made a lot of changes changes in the sources, maybe you
+should get them and compile yourself to make AvetanaBluetooth.jar if
+the provided one is not working (get our "avetana library" from
+webpage).  Please note Avetana libraries provided does NOT work with
+BlueZ 2.5 (SuSE 9.1 and Fedora Core) but 2.10 (SuSE 9.2). If you use
+our version of Avetana's libreries, make sure there is no service on
+RFCOMM channel 6 nor channel 7. If you can not start the Bluetooth
+stack, try Impronto's libraries. Impronto's is NOT open source nor
+free libraries and is NOT included within this system, but you can
+get a free trial from www.impronto.com. To use the Impronto's
+library (or any other JSR-82 compliant) just include it in the
+Classpath.  Likely, you must change the java.library.path property
+in the JVM as well.  See browserSD script.
+
+In order to run the system, execute dist/browserSD. It will read the
+configuration from dist/conf/msd.properties and dist/conf/cache.xml
+and will try to start a Bluetooth and Internet servers, search engines
+and communicators, as well as a MSDManager. If it is able to,
+BrowserSD will start a graphical interface.
+
+browserSD [impronto] [text] [example] [-o (parameters)]
+impronto: use Impronto's libraries (otherwise Avetana's)
+	Note: Impronto's ServerNotifier.acceptAndOpen() can not be stopped
+	through the org.msd.comm.BluetoothServer.stop() method and the system
+	will hang if you try to finish it. Comment every line in
+	org.msd.comm.BluetoothServer.stop() if you plan to use Impronto's
+	libraries. On the other hand, Avetana's libraries register a new
+	server for each call to acceptAndOpen(). This is a very bad thing,
+	and not our fault at all...
+text: print debugging information to the screen instead of files.
+example: run an example application, not a service browser.
+
+-o the rest of the line are parameters to the system.
+
+Parameters:
+-log4j file: file to configure the logging for Log4j (default,
+log4j.conf)
+-file conf.file: load conf/file.properties with the properties of the
+system. These files set the default environment in the same way these
+parameters do.
+-local file: save the cache to file (default, "cache.xml". "" means do
+not save)
++conf: show a graphical dialog to configure the system (default, off)
+-conf: do not show graphical conf 
++gui: show a graphical service browser (default, off)
+-gui: do not show graphical browser
+
+For details about the system architecture, refer to JavaDoc (English) and
+architecture document (Spanish). You can find this documents at the
+webpage of the project.
+
+* Output
+The outputs of the system are:
+- A file cache.xml describing in a common way the services found in
+  SLP and SDP. This cache is a local one, and in the future must share
+  its contents with the general cache of the MSD. Nowadays, this cache
+  is only experimental.
+- A set of Proxy.log.X files with the system debugging messages. If
+  you find any error, please send back these files and your system
+  configuration.
+- Depending of your log4j configuration (log4j.conf), you can get a
+  lot of console output. This output is the same that the one in
+  Proxy.log.X files.  We use Chainsaw to view the logging info. If you
+  wish you can enable it at log4j.conf file.
+
+* Test environment
+Read Testing document about the tests performed (only in Spanish)
+
+* Variants
+Maybe you have noticed several several estrange codes in the source
+files: we mean the comments with //@@XXX format. Lines marked with
+these comments mean:
+
+//@@1.4	This line is for jdk1.4 compiler (maybe also suitable for
+	previous compilers) It runs in 1.5 as well.
+
+//@@1.5	This line is for jdk1.5 compiler and won't compile nor run in
+	previous versions. Roughly speaking, lines commented in this
+	way includes the new foreach loops and several XML flags.
+
+//@@l	This line is for logging or debugging. You can save some bytes
+	and time commenting this line. Besides, if you comment every
+	line with //@@l code you do not need log4j library and you
+	save about 350KB. If you want a piece of advice, comment these
+	only in distributable versions. 
+
+In C you would wrap the lines above between #IF(CON) ... #ENDIF but
+Java hasn't a preprocessor. So we have defined this codes and we
+provide a script for *nix named 'source' to make automatically the
+changes. Get help running 'source help' and be sure of reading the
+warning.
+
+For things to solve, fix and implement, look for "@todo" and "FIXME"
+tags in the source code.
+
+* Encoding
+In the very first version of the system we commented in Spanish.
+Nowadays we are writing only in English, but if you get a text in
+Spanish (and you understand it) you must be aware of the encoding
+used:
+- iso-8859-1 for Java source comments.
+- (mostly) utf-8 for CVS comments.
+
+* Libraries
+In libs you can find the libraries used by the system. These libraries
+are not related in any way with us. They all are under GPL license.
+- AvetanaBluetooth.jar: Avetana library for Bluetooth. Includes binary
+  code and only runs in Linux with BlueZ 2.10. Get the sources from
+  our web (also Sourceforge, but they don't provide a Makefile) in
+  order to compile for other systems.
+- BlueCove.jar: open source library for Windows XP SP2. It is in alpha
+  state and is very unlikely to work properly.
+- slp.jar: OpenSLP 1.0 libraries, modified to not print any log at
+  all.  Get the the original version from www.openslp.org and our
+  version from the web.
+- log4j.jar: Log4J from Apache for logging. Get the libraries from
+  logging.apache.org
+- klinglibs: define constants for Bluetooth.
+
+* Authors and system administrators
+juanvv@alumnos.etsit.upm.es
+rsoldado@entel.upc.es
+
+Barcelona, Spain, December 2004
+
+ vim:ft=text:tw=70:norl:

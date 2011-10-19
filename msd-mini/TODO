@@ -1,0 +1,4 @@
+- Permitir que la versión Mini del MSD register sus servicios, como medium.
+- Mejorar la eficiencia de la librería, sobretodo la versión mini.
+- Terminar de introducir la seguridad en la versión medium.
+

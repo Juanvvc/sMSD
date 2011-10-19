@@ -1,0 +1,1 @@
+255#"\Archivos de programa\J9\PPRO10\bin\j9.exe" "-jcl:ppro10" "-cp" "\Temp\msd-medium.jar" "org.msd.ImageClient"

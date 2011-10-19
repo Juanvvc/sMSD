@@ -1,0 +1,14 @@
+import org.msd.proxy.*;
+org.apache.log4j.BasicConfigurator.configure();
+class prueba implements TimeListener{
+	public boolean signal(int type, Object data){
+		print(type);
+		return type!=20;
+	}
+}
+timer=TimeManager.getTimeManager();
+prueba=new prueba();
+timer.register(prueba,5,5,null);
+timer.register(prueba,10,10,null);
+timer.register(prueba,15,15,null);
+timer.register(prueba,20,20,null);

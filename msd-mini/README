@@ -1,0 +1,155 @@
+This folder includes the Mini and Medium versions of the MSD. The Mini
+version is prepared for mobile phones with Bluetooth and multimedia
+capabilities (not mandatory but recommended). The Medium is for PDAs with
+some form of TCP/IP connection (specially Wi-Fi).
+
+DESCRIPTION
+-----------
+
+By now, an MSD being Mini can not be main of any network. Only Bluetooth
+support is included. No security is included.
+
+In the same way, no security is included in Medium version. TCP/IP and
+Bluetooth networking are included, but no bridging between them.
+
+In order to work, in the network of the Mini or Medium MSD should be a main
+and complete MSD.
+
+The documentation included with this source is not trustful: this version
+is just a 'prove of concept' and can be discontinued at any moment. Do not
+trust on the JavaDoc! Ask directly to the maintainers (see the bottom of
+this document) for a more complete information.
+
+There are three entities in a complete MSD:
+
+- Cache:
+	- Uses XML for
+		- reading items from stream (R)
+		- write items on stream
+	- Save metainformation (R)
+- Proxies:
+	- SLP (D)
+	- SDP (R)
+	- MSDManager (R)
+- Network stack:
+	- Bluetooth (R)
+	- TCP/IP (R)
+
+The items marked with D has been dropped. The ones with R has been reduced:
+
+- Save metainformation: information stored has been drastically reduced.
+- SDP: only name and URL are saved
+- MSDManager: no LKH, no joining phase, the Mini MSD can not be main.
+  Implements the Single algorithm (it works although the rest of MSDs in the
+  network use the Shared algorithm)
+- Networks: Mini version has no TCP/IP and no MSD server is installed on the
+  device. Medium version has no server on Bluetooth networks, but has a
+  complete TCP/IP support.
+
+REQUISITES
+----------
+
+Compiling
+- J2SE (tested with 1.4.2 and 1.5, but very likely earlier versions are also
+  suitable)
+- Wireless Toolkit 2.2, downloadable from Sun.
+- Java Personal Profile 1.0 classes downloadable from Sun (runtime
+  environment for Linux, even if you use Windows). Only btclasses.zip is
+  required. It can be safely substituted by classes.zip from the J2SE
+  environment, but if you make changes you will not be able to prove Personal
+  Profile 1.0 compatibility during compilation time.
+- GNU Make and some flavor of *nix to compile from Makefile. Compiling from
+  Windows is not currently supported, but it must not be difficult following
+  the equivalent steps to the Makefile from the Windows console. Change
+  Makefile to fit your system paths. A build.xml file is provided to build
+  the Medium version with Ant (Linux and Windows). Run "ant medium" in the
+  directory of the system, having btclasses.zip in the parent directory.
+
+Running
+- A complete PC with JRE for both versions and/or
+- J2ME MIDP2.0 CLDC1.0 JSR82(bluetooth) and JSR64(mmapi) for Mini version.
+  JSR64 is not required if the ImageClientMini demo is not used.
+- J2ME PP1.0 for Medium version. JSR82 is recommended.
+
+TESTING ENVIRONMENTS
+--------------------
+
+- Laptop HP 4940ea with Bluetooth dongle and WiFi interface. It runs SuSE
+  Linux 9.2. This device runs the complete version bridging Bluetooth and
+  WiFi and one image server.
+- A printer connected to the Ethernet interface of the laptop.
+- iPAQ HP 4511 and iPAQ HP rx2750 with Windows 2003 and J9 virtual machine
+  by IBM. Avetana driver for Bluetooth seems not to work on these devices.
+  These devices runs the Medium version with org.msd.ImageClient.
+- Nokia 6600 with internal virtual machine, JSR82 and JSR64. This device runs
+  the Mini version with org.msd.ImageClientMini.
+
+COMPILATION AND RUNNING
+-----------------------
+
+* Probably you will need an image server somewhere in the network. Take the
+one in CVS:
+cvs co -d :pserver:anonymous@rick.upc.es:/usr/local/share/cvsrep imageServer
+cd imageServer
+make server ATTRS="images.txt 15152"
+
+If the server fails to register itself in SLP, try
+slptool register service:imageserver://HOST:15152
+
+Register also a connected printer in the network:
+slptool register service:printer://HOST:PORT
+
+You can simulate a printer with the command (in HOST with *nix):
+netcat -l -p PORT
+
+* Compile and run Mini version:
+
+- Test with a complete J2SE the MSD Mini library (printing text):
+make mini
+cd dist
+java -cp ../libs/AvetanaBluetooth.jar:msd.jar org.msd.MSDPrinter2 mini hello
+
+- The MSD Mini for J2ME (MIDP2/CLDC1.0 tested on Nokia 6600):
+(change the J2ME_PATH in Makefile to fit your system)
+make mini; cd dist
+Download to a device MIDP2.0 CLDC1.0 JSR82 (bluetooth) and JSR64 (mmapi)
+or
+emulator -cp msd-mini org.msd.MSDPrinter
+	(join the MSD network and print an arbitrary text)
+or
+emulator -cp msd-mini.jar org.msd.ImageClientMini
+	(join the MSD network, look for image servers and print them)
+
+* Compile and run Medium version (at least J2ME PP1.0, runs ok on J2SE):
+make medium (or 'ant medium')
+cd dist
+Download in a J2ME PP1.0 device
+or
+java -cp msd-medium.jar org.msd.ImageClient
+
+INSTALLING SOFTWARE ON THE DEVICES
+---------------------------------
+
+For Nokia 6600, just download the msd-mini.jar file with Bluetooth.
+
+For iPAQ 4511, install a java virtual machine (tested on J9 PP1.0 from IBM),
+change the msd-medium.lnk file to fit your configuration and download the
+msd-medium.jar and msd-medium.lnk files.
+
+TEST SCRIPT
+-----------
+
+- Take a laptop with Wi-Fi, Ethernet and Bluetooth interfaces. Run an SLP
+  server on it.
+- Connect a printer to the Ethernet interface of the laptop. Register its
+  service in SLP.
+- Run and register an image server on the laptop.
+- Make and download msd-mini.jar in the 6600. Run the "MSD printing" example
+  (org.msd.ImageClientMini), join to the network, see the images published by
+  the image server and take a photo. Try to print an image.
+- Make and download msd-medium.jar in 4511. Run org.msd.ImageClient class.
+  Browse the image servers (the one in the laptop and the one in the phone)
+  and try to print an image.
+
+Juan Vera (juanvv@alumnos.etsit.upm.es) and Raul Soldado
+(rsoldado@entel.upc.es). May 2005

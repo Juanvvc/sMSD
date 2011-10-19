@@ -1,0 +1,10 @@
+#!/bin/bash
+SERVICE="service:printer://192.168.1.22:15153"
+PRINT_FILE="print"
+
+slptool register $SERVICE
+netcat -l -p 15153 > $PRINT_FILE
+display $PRINT_FILE
+#kuickshow $PRINT_FILE
+rm $PRINT_FILE
+slptool deregister $SERVICE

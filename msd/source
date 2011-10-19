@@ -1,0 +1,78 @@
+#!/bin/bash
+# For help, run source help
+# Juan Vera del Campo, January 2005
+
+# Print a message in the screen as a warning, and ask if the user wants to
+# continue. If the response is other than yes, break this script.
+function warning(){
+	echo "Warning: $1"
+	echo "Are you sure? (yes/no)"
+	read resp
+	if [ ! "$resp" = "yes" ]; then exit 1; fi
+	echo
+}
+
+# if the first parameter was not "known", print a warning.
+if [ ! "$1" = "known" ]; then
+warning "This script performs automatic changes in the source code in several
+ways. Some are helpful, some are destructive. Please, do NOT commit any files
+into CVS after running this script, even if you have reverted the changes.
+For help, run '$0 help'."
+else shift; fi
+
+# Select actions
+case $1 in
+	1.5)
+	# Comment lines with //@@1.4 and comment-out lines with //@@1.5
+		echo "Setting source code to Java 1.5. Revert with $0 1.4"
+		for i in `find src -name '*.java' -print`; do
+			sed -i~ -e 's/\(^.*\/\/@@1.4.*$\)/\/\/\1/g' $i;
+			sed -i~ -e 's/\(^\s*\)\/\/\(.*\/\/@@1.5.*$\)/\1\2/g' $i;
+		done ;;
+	1.4)
+	# Comment lines with //@@1.5 and comment-out lines with //@@1.4
+		echo "Setting source code to Java 1.4. Revert with $0 1.5"
+		for i in `find src -name '*.java' -print`; do
+			sed -i~ -e 's/\(^.*\/\/@@1.5.*$\)/\/\/\1/g' $i;
+			sed -i~ -e 's/\(^\s*\)\/\/\(.*\/\/@@1.4.*$\)/\1\2/g' $i;
+		done ;;
+	-log)
+	# Comment lines with //@@l
+		echo "Dropping logging from source code. Revert with $0 +log"	
+		for i in `find src -name '*.java' -print`; do
+			sed -i~ -e 's/\(^.*\/\/@@l.*$\)/\/\/\1/g' $i;
+		done ;;
+	+log)
+	# Comment-out lines with //@@l
+		echo "Adding logging to source code. Revert with $0 -log"	
+		for i in `find src -name '*.java' -print`; do
+			sed -i~ -e 's/\(^\s*\)\/\/\(.*\/\/@@l.*$\)/\1\2/g' $i;
+		done ;;
+	-com)
+	# Remove comments of the source. This stuff is not funny...
+warning "You are about to remove every comment of the sources. This a
+destructive action in many ways and you can not revert it."
+		echo "Ok, you choose..."
+		for i in `find src -name '*.java' -print`; do
+			sed -i~ -e 's/\/\/.*$//g' $i
+			sed -i~ -e 's/\/\*.*\*\///g' $i
+			sed -i~ -e 's/\/\*.*$//g' $i
+			sed -i~ -e 's/^\s*\*.*$//g' $i
+			$0 known clean
+		done ;;
+	clean)
+	# Remove backup files
+		rm -f `find . -name '*~' -print`
+		rm -f `find . -name '*.bak' -print` ;;
+	*)
+	# Print help (this is the default case)
+		echo "This script configures the source for several issues:"
+		echo "$0 1.4: set commands for Java 1.4"
+		echo "$0 1.5: set commands for Java 1.5"
+		echo "$0 -log: Do not use log4j"
+		echo "$0 +log: Use log4j (for logging)"
+		echo "$0 -com: just for fun, remove every comments."
+		echo "$0 clean: remove backup files (*~ and *.bak)"
+		echo "$0 known X: Do not show the warning and run $0 X." ;;
+esac
+

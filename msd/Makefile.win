@@ -1,0 +1,62 @@
+# Makefile to compile the system.
+# GNUMake for Windows is needed.
+# This version only works in Windows (not *nix)
+
+# Usage:
+# 'make clean' removes every binary leaving the sources and external libs.
+# 'make' compiles the system.
+# 'make javadoc' creates JavaDoc
+
+# Modify the following vars for your system
+
+# Java Development Kit folder
+JAVA_HOME=c:/utils/j2sdk1.4.2_03
+# Temporal folder for compiling classes
+MDIR=build\classes
+ODIR=build/classes
+# Folder for the final distribution
+DDIR=dist
+# Folder of JavaDoc
+DOCDIR=$(DDIR)/doc
+# Source folder
+SDIR=src
+# ClassPath (includes libraries)
+CPATH=$(SDIR);libs\\log4j.jar;libs\\slp.jar;libs\\AvetanaBluetooth.jar;libs\\BlueCove.jar;libs\\klingslib-1.0.jar
+# CPATH=$(CLASSPATH)
+# Source files encoding
+ENCODING=iso-8859-1
+# Files to compile (they must make use of the whole system!)
+OBJ=org/msd/*.java org/msd/proxy/*.java org/msd/cache/*.java org/msd/comm/*.java \
+# Packages of the system
+PACKAGES=org.msd org.msd.proxy org.msd.comm org.msd.cache
+# Final file
+FJAR=msd.jar
+
+# Create directories and compile the system
+all:
+	mkdir $(DDIR)
+	mkdir $(MDIR)
+	make -f Makefile.win jar
+
+# Compile a single file
+$(OBJ):
+	$(JAVA_HOME)/bin/javac -encoding $(ENCODING) -classpath $(CPATH) -d $(ODIR) $(SDIR)/$@
+
+# Create Jar file (compiling) and move distribution file to dir
+# Finally, give execution privileges to browserSD in dist
+jar: $(OBJ)
+	$(JAVA_HOME)/bin/jar cf $(FJAR) $(ODIR)/org $(ODIR)/secureMulticast
+	xcopy /Y /S libs\\* $(DDIR)
+	xcopy /Y /S etc\\* $(DDIR)
+	move /Y $(FJAR) $(DDIR)\\$(FJAR)
+
+# Create the JavaDoc
+javadoc:
+	mkdir $(DOCDIR)
+	$(JAVA_HOME)/bin/javadoc -encoding $(ENCODING) -sourcepath $(SDIR) -d $(DOCDIR) $(PACKAGES)	
+
+# Delete not needed directories
+clean:
+	rd /S /Q $(MDIR)
+	rd /S /Q $(DDIR)
+	rd /S /Q $(DOCDIR)

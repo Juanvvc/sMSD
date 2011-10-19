@@ -1,0 +1,146 @@
+import org.msd.cache.*;
+import java.util.Vector;
+import java.io.*;
+
+cache=new Cache("1");
+main=new Service(cache,true);
+main.setName("MSD");
+net=new Network(cache,false);
+net.setMain(true);
+net.setName("bluetooth");
+net.setURL("btspp://123456789");
+main.appendChild(net);
+otro=new Service(cache,true);
+otro.setName("MSD2");
+
+    class StringTokenizer{
+        private int p=0;
+        private String sep=null;
+        private String s;
+	private boolean end=false;
+        public StringTokenizer(String s,String sep){
+            this.s=s;
+            this.sep=sep;
+	    p=0;
+        }
+
+        public String nextToken(){
+		if(p>=s.length()||p<0){
+			end=true;
+			return null;
+		}
+		int a=p;
+		String next=null;
+		p=s.indexOf(sep,p);
+		if(p==0){
+			p=p+sep.length();
+			return nextToken();
+		}
+		if(p==-1){
+			next=s.substring(a,s.length());
+			end=true;
+		}else{
+			next=s.substring(a,p);
+			p=p+sep.length();
+		}
+		return next;
+        }
+
+        public boolean hasMoreTokens(){
+            return end;
+        }
+    }
+
+    Service getMain(String s){
+
+            int main=s.indexOf("service");
+            if(main>-1){
+                int p1=s.indexOf(" idcache=\"",main);
+		p1+=10;
+                int p2=s.indexOf("\"",p1);
+                String idmain=s.substring(p1,p2);
+
+                p2=s.indexOf(" name=\"bluetooth\"",p2);
+		p2+=18;
+                p2=s.indexOf(" name=\"url\"",p2);
+                p1=s.indexOf(">",p2);
+                p2=s.indexOf("<",p1);
+                String url=s.substring(p1+1,p2);
+
+                Service msdmain=new Service(cache,true);
+                msdmain.setName("MSD");
+                msdmain.setIDCache(idmain);
+                Network network=new Network(cache,false);
+                network.setName("bluetooth");
+                network.setURL(url);
+                msdmain.appendChild(network);
+
+		return msdmain;
+		}else{
+			return null;
+		}
+    }
+
+	Vector getServices(String s){	
+try{
+            int serv=0;
+            Vector salida=new Vector();
+            while((serv=s.indexOf("<service",serv))>-1){
+		    serv+=8;
+                Service found=new Service(cache,false);
+                int p1=s.indexOf(" idcache=\"",serv);
+		p1+=10;
+                int p2=s.indexOf("\"",p1);
+                found.setIDCache(s.substring(p1,p2));
+
+                p1=s.indexOf(" id=\"",serv);
+		p1+=5;
+                p2=s.indexOf("\"",p1);
+                found.setID(s.substring(p1,p2));
+
+                p1=s.indexOf(" gw=\"",serv);
+                if(p1>-1){
+			p1+=5;
+                    p2=s.indexOf("\"",p1);
+                    found.setGateway(s.substring(p1,p2));
+
+                }
+                    salida.addElement(found);
+            }
+            return salida;
+
+        } catch(Exception e){
+		e.printStackTrace();
+            return new Vector();
+        }
+	}
+
+    public static String readLine(InputStream in,int max) throws IOException{
+        byte[] b=new byte[max];
+        int read=0;
+        boolean ok=false;
+        for(read=0;read<max;read++){
+            int r=in.read();
+            if(r==-1){
+                break;
+            }
+            byte rb=(byte)r;
+
+            byte[] rb2=new byte[1];
+            rb2[0]=rb;
+            System.out.print(new String(rb2));
+
+            b[read]=rb;
+            if(rb=='\n'&&ok){
+                break;
+            } else if(rb=='\r'&&!ok){
+                ok=true;
+            } else{
+                ok=false;
+            }
+        }
+        if(read>=max){
+            throw new IOException("Line too long: "+read);
+        }
+        return new String(b,0,(ok?read-1:read));
+    }

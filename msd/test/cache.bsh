@@ -1,0 +1,55 @@
+// Tests for the org.msd.cache package
+// If BeanShell installed, run from main dir `make; make tester` and inside
+// BeanShell `source("../test/cache.bsh");`
+
+import org.msd.cache.*;
+
+// Cache 100 with tw0 MSDs
+cache=new Cache("100");
+serv=cache.createElementFromXML("<service name=\"MSD\"><network name=\"internet\"><attr name=\"url\">1.2.3.4</attr></network></service>");
+cache.addElement(serv);
+serv2=serv.clone();
+serv2.getNetwork("internet").setURL("5.6.7.8");
+cache.addElement(serv2);
+serv3=new Service(cache,true);
+serv3.setName("MSD");
+serv3.setIDCache("desconocido");
+serv3.setGateway("otroMSD");
+serv3.setHops(1);
+
+cache2=new Cache("200");
+
+print("Test 1: join cache to cache2: ");
+cache2.join(cache);
+if(cache2.getChilds().size()==cache.getChilds().size()){
+	print("Ok");
+}else{
+	throw new Exception("Not passed");
+}
+
+print("Test 2: look for serv in cache2: ");
+newServ=cache2.getElement(serv.getIDCache(),serv.getID());
+if(newServ.match(serv)){
+	print("Ok");
+}else{
+	throw new Exception("Not passed");
+}
+
+print("Test 3: save cache in a stream and reset: ");
+out=new java.io.ByteArrayOutputStream();
+cache.save(out);
+b=out.toByteArray();
+print("Ok save");
+cache.reset();
+if(cache.getChilds().size()==0){
+	print("Ok reset");
+}
+
+print("test 4: load cache from a stream: ");
+cache.load(new java.io.ByteArrayInputStream(b));
+newServ=cache.getElement(serv.getIDCache(),serv.getID());
+if(newServ.match(serv)){
+	print("Ok");
+}else{
+	throw new Exception("Not passed");
+}

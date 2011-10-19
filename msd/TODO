@@ -1,0 +1,37 @@
+ALTA PRIORIDAD
+- Revisar el método MSDManager.transformInCache
+- Si un SDManager ha sido cerrado para todas sus redes, que se ponga como
+  no funcionando.
+- Si un SDManager no funciona después de cerrar redes, quitarlo de MSDManager
+- Quitar excepción en internet "Socket close" cuando acaba un GET (aunque sea
+  inocua)
+- Cuando se encuentra un error en una conexión, parece que el error no se
+  propaga hasta el cliente. Ejemplo: en una conexión para el uso de servicios
+  remotos, si el MSD final no puede conectarse con el servicio enviaría un
+  mensade de error al cliente. Realmente no sucede así, sino que la cola de
+  mensajes del MSD final se llena con ese mensaje de error (¿por qué, si él
+  debe enviarlo y no recibirlo?)
+- Cuando un puente envía un mensaje UPDATE a su líder porque han cambiado
+  los servicios de otra red, el puente maneja el menssaje UPDATE del líder,
+  cuando realmente debería ignorarlo.
+- Elección de líderes no funciona con tres MSDs.
+- Probar conexión loopback.
+- Permitir que los archivos XML a leer puedan tener varias líneas.
+- Permitir que los otros MSDs puedan configurarse manualmente, quizá en la
+  caché inicial, evitándose así la búsqueda de MSDs.
+- Crear un MSD cliente completo cuya interfaz sea una página web mediante JSP.
+- Permitir que un cliente envíe mensajes a un MSD sin conocer su
+  identificador pero sí su dirección de red. Por ejemplo, usar un
+  identificador estático "tu" que signifique que procese siempre el mensaje.
+- Después de apagar una red, quitar todos los servicios encontrados de la
+  cache interna para esa red.
+ 
+BAJA PRIORIDAD
+- Identificar cual es el mejor momento para usar el servicio. En el algoritmo
+  shared parece que cuando acaba el UPDATE (al salir del manageUpdate() es un
+  buen momento)
+- Implementar los demás algoritmos de la cache.
+- Reescribir MSDManager para que empiece un nuevo MessageManager con cada
+  red, que puede tener un algoritmo diferente que la de al lado.
+- Añadir el concepto de emperador y jerarquía superior a los líderes.
+- Permitir que SLPManager solo busque en una red.

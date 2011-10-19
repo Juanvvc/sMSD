@@ -1,0 +1,101 @@
+#!/bin/bash
+# Ejecutable Linux de los proxies
+# Uso:
+# - 'browserSD [config1] [config2] ... [-o ops-proxy]'
+# Configuraciones:
+# - text: ejecuta interfaz texto en vez de gráfica
+# - impronto: usa las librería de Impronto en vez de Avetana
+# - example: run an example application.
+# - ops-proxy Opciones que se le pasan tal cual al proxy (vea README)
+#
+# Variables de entrada (definidas en la shell):
+# JAVA_HOME al directorio raíz de la JVM a utilizar
+# MSD_PROXY_HOME al directorio raíz del proyecto.
+# Si no están definidas intentará adivinarlas.
+
+# Lista de scopes del sistema para SLP. La única manera de cambiarla es
+# durante el inicio (vea RFC2614). Si no se usa el Proxy SLP, el valor de esta
+# variable es indiferente.
+SCOPES=DEFAULT
+LANG=en
+
+# Si no esta definida la variable MSD_PROXY_HOME, la intentamos adivinar
+if [ -z "$MSD_PROXY_HOME" ]; then
+	# Buscamos el directorio donde esté este script
+	PRG=$0
+	while [ -h "$PRG" ]; do
+		ls=`ls -ld "$PRG"`
+		link=`expr "$ls" : '^.*-> \(.*\)$' 2>/dev/null`
+		if expr "$link" : '^/' 2> /dev/null >/dev/null; then
+			PRG="$link"
+		else
+			PRG="`dirname
+			"$PRG"`/$link"
+		fi
+	done
+	MSD_PROXY_HOME=`dirname "$PRG"`
+	# Si no somos capaces de encontrar el directorio, informamos
+	if [ ! -e "$MSD_PROXY_HOME" ]; then
+		echo "Please, define MSD_PROXY_HOME."
+		exit 1
+	fi
+fi
+# Cambiamos a ese directorio del proyecto
+cd $MSD_PROXY_HOME
+echo "Using project's directory: $MSD_PROXY_HOME"
+
+# Buscamos una máquina virtual si el usuario no tiene definida JAVA_HOME
+if [ -z "$JAVA_HOME" ]; then
+	# Buscamos en este directorioo (última versión Dec 2004)
+	if [ -e /opt/jdk1.5.0/bin/java ]; then
+		JAVA_HOME=/opt/jdk1.5.0 ;
+	else
+		# Si no, este directorio (por defecto de SuSE)
+		if [ -e /usr/lib/java/bin/java ]; then
+			JAVA_HOME=/usr/lib/java ;
+		# No encontramos: avisamos
+		else
+			echo "Please, define JAVA_HOME.";
+			exit 1:
+		fi
+	fi
+fi
+echo "Using JAVA_HOME=$JAVA_HOME"
+
+# Configuramos las variables necesarias
+JAVA=bin/java
+JAVAOPT=
+OPTS=
+CLASSPATH=klingslib-1.0.jar:log4j.jar:slp.jar:avetanaBT.jar:msd.jar:iaik_jce_full.jar:.
+MAINCLASS=org.msd.BrowserSD
+
+# Establecemos los parámetros que dependan de la configuración
+CONFIG=$1
+while [ -n "$CONFIG" ]; do
+	echo "Using $CONFIG config."
+	case $CONFIG in
+		text)
+			OPTS="$OPTS -log4j log4j-text.conf" ;;
+		impronto)
+			CLASSPATH="klingslib-1.0.jar:idev_bluez.jar:log4j.jar:slp.jar:msd.jar:/usr/share/java:iaik_jce_full.jar:."
+			JAVAOPT="$JAVAOPT -Djava.library.path=/usr/lib" ;;
+		example)
+			MAINCLASS=org.msd.PrinterExample ;;
+		secure)
+			JAVAOPT="$JAVAOPT -Djavax.net.ssl.keyStore=keystore -Djavax.net.ssl.keyStorePassword=testing -Djavax.net.ssl.trustStore=keystore -Djavax.net.ssl.trustStorePassword=testing"
+			;;
+		-o)
+			shift
+			OPTS="$@ $OPTS"
+			break ;;
+		*)
+			MAINCLASS="$CONFIG" ;;
+	esac
+	shift
+	CONFIG=$1
+done
+
+# Ejecutamos
+EJECUTA="$JAVA_HOME/$JAVA $JAVAOPT -Duser.language=$LANG -Dnet.slp.useScopes=$SCOPES -cp $CLASSPATH $MAINCLASS $OPTS"
+echo "Running: $EJECUTA";
+$EJECUTA

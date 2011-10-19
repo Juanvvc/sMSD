@@ -1,0 +1,474 @@
+/*
+ * BrowserSP.java
+ *
+ * This file stores the main class of the system.
+ */
+
+package org.msd;
+
+import javax.swing.*;
+import java.awt.event.*;
+import java.awt.*;
+import org.msd.proxy.*;
+import org.msd.cache.*;
+import org.apache.log4j.*; //@@l
+import java.util.ResourceBundle;
+import java.io.*;
+import org.msd.comm.NetworkManager;
+
+/**
+ * System's main class for a service browser.
+ * This class is in charge of starting and finishing the system.
+ * During starting, read configuration, start an interface /graphical or text),
+ * create the global cache and the MSDManager. During finishing, stops
+ * the MSDManager and exit.
+ *
+ * @version $Revision: 1.19 $
+ */
+public class BrowserSD extends javax.swing.JFrame implements MSDListener{
+    /** Actual logger of this class */
+    private static Logger logger2=Logger.getLogger(BrowserSD.class); //@@l
+    /** Wrapping class to run the logger, graphical and textual messages */
+    private GUILogger logger;
+    /** configuration. Includes internationalization */
+    private ResourceBundle resource;
+    /** The manager MSD of the system */
+    private MSDManager msdmanager=null;
+
+    /** Start the browser.
+     * @param args Command line arguments. */
+    public static void main(String args[]){
+        // initialize the options from commands line and common conf file.
+        BrowserProperties.initProperties(args,"conf.msd");
+
+        // Create the browser
+        BrowserSD browser=new BrowserSD();
+
+        // Initialize the gui if you should
+        if(BrowserProperties.gui){
+            browser.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            browser.setTitle("MSD Browser");
+            browser.setVisible(true);
+            browser.pack();
+        }
+
+        // add a new thread for properly shutdowning the system
+        Runtime.getRuntime().addShutdownHook(new ShutdownThread(browser));
+    }
+
+    /** Creates new form BrowserSLP.
+     * Before entering this constructor BrowserProperties has been properly
+     * initiaized with the configuration of the system.
+     * @see #main*/
+    public BrowserSD(){
+        // Create the ResourceBundle wich corresponds to the locale
+        resource=ResourceBundle.getBundle("lang.gui");
+        // Make the logger
+        logger=new GUILogger(resource);
+        logger.setLogger(logger2); //@@l
+
+        // Make the cache of the system
+        // Unique identifier of this MSD
+        int id=1000;
+        Cache cache=null;
+        try{
+            cache=new Cache(""+id);
+            String cacheFile=BrowserProperties.cache;
+            if(cacheFile==null||cacheFile.length()==0){
+                cache.load(new ByteArrayInputStream(BrowserProperties.cachexml.
+                        getBytes()));
+            } else{
+                cache.load(new FileInputStream(cacheFile));
+            }
+        } catch(Exception e){
+            logger.fatal("Cache not created: "+e.toString());
+            e.printStackTrace(); //@@l
+            System.exit(1);
+        }
+
+        String msdconf=BrowserProperties.msdconf;
+        if(BrowserProperties.graphicalconf){
+            msdconf=MSDManager.DEFAULT;
+            BrowserPropertiesGUI bp=new BrowserPropertiesGUI(this,cache);
+            if(bp.canceled()){
+                finish();
+                logger.info("Init process canceled by the user");
+                System.exit(0);
+            }
+        }
+
+        // start MSDManager
+        try{
+            msdmanager=new MSDManager();
+            msdmanager.init("MSD",cache,msdconf);
+            msdmanager.addMSDListener(this);
+        } catch(Exception e){
+            logger.error("Error while creating MSD: "+e);
+            e.printStackTrace(); //@@l
+            System.exit(1);
+        }
+
+        logger.debug("Post-MSD cache: "+cache);
+
+        // try to start the gui
+        if(BrowserProperties.gui){
+            try{
+                initComponents();
+                for(java.util.Enumeration e=msdmanager.getNetworks().elements();
+                                            e.hasMoreElements();){
+                    NetworkManager net=(NetworkManager)e.nextElement();
+                    panelBotones.add(new NetworkPanel(net,msdmanager,resource));
+                }
+                setVisible(true);
+                pack();
+                logger.info("GUI interface");
+            } catch(Throwable e){
+                setVisible(false);
+                BrowserProperties.gui=false;
+                logger.warn("Gui couldn't start: "+e.toString());
+                logger.info("Switching to textual interface");
+            }
+        } else{
+            logger.info("Text interface");
+        }
+
+        updateCache(cache);
+    }
+
+    /** This method is called from within the constructor to
+     * initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is
+     * always regenerated by the Form Editor (Netbeans 4).
+     */
+    private void initComponents(){//GEN-BEGIN:initComponents
+        javax.swing.JScrollPane jScrollPane1;
+
+        panelBotones=new javax.swing.JPanel();
+        jScrollPane1=new javax.swing.JScrollPane();
+        html=new javax.swing.JEditorPane();
+
+        getContentPane().setLayout(new java.awt.BorderLayout());
+
+        getContentPane().add(panelBotones,java.awt.BorderLayout.SOUTH);
+
+        html.setEditable(false);
+        html.setContentType("text/html");
+        html.setPreferredSize(new java.awt.Dimension(300,400));
+        jScrollPane1.setViewportView(html);
+
+        getContentPane().add(jScrollPane1,java.awt.BorderLayout.CENTER);
+
+    }//GEN-END:initComponents
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JEditorPane html;
+    private javax.swing.JPanel panelBotones;
+    // End of variables declaration//GEN-END:variables
+
+    /** @param cache Show the cache and store in a file */
+    private void updateCache(Cache cache){
+        String cachestr=null;
+        // log the cache
+        cachestr=cache.toString();
+        logger.debug("Using cache: "+cachestr);
+
+        setTitle("MSD: "+cache.getID());
+
+        // should we save the cache in a file?
+        if(BrowserProperties.localFile!=null){
+            try{
+                FileOutputStream fout=new FileOutputStream(BrowserProperties.
+                        localFile);
+                cache.save(fout);
+                fout.close();
+            } catch(Exception ex){
+                logger.warn("Cache not saved to file: "+ex.toString());
+            }
+        }
+
+        // show the cache, if we are in a gui environment
+        if(BrowserProperties.gui){
+            try{
+                // Transform to HTML code before showing
+                ByteArrayOutputStream out=new ByteArrayOutputStream();
+                ByteArrayInputStream c2=new ByteArrayInputStream(cachestr.
+                        getBytes());
+                FileInputStream filexsl=new FileInputStream(resource.getString(
+                        "cache2html"));
+                XMLTools.transformXML(c2,filexsl,out);
+                html.setText(out.toString());
+            } catch(Exception ex){
+                logger.error("View not created: "+ex.toString());
+                ex.printStackTrace(); //@@l
+            }
+        }
+    }
+
+    /** Event from the MSD: the cache has been updated.
+     * @param e An Event from the MSD */
+    public void event(MSDEvent e){
+        switch(e.getType()){
+        case MSDEvent.UPDATED:
+
+            // show the cache
+            updateCache(((MSDManager)e.getSource()).getCache());
+            break;
+        case MSDEvent.LEVEL:
+            logger.info(e.getNetwork()+" changed its level to "+
+                        ((MSDManager)e.getSource()).getLevel(e.getNetwork()));
+            break;
+        }
+    }
+
+    /** Properly finish the system.
+     * Call this method during system exit. */
+    public void finish(){
+        logger.info("Shutting down the system");
+        if(msdmanager!=null){
+            msdmanager.finish();
+        }
+    }
+
+}
+
+
+/** Class for debuging, in textual and graphical mode. */
+class GUILogger{
+    private Logger logger; //@@l
+    private ResourceBundle resource;
+    /**
+     *
+     * @param resource The Bundle to read the language tags from.
+     */
+    public GUILogger(ResourceBundle resource){
+        this.resource=resource;
+    }
+
+    /**
+     * Set the real logger object
+     * @param logger The actual Log4j object for logging
+     */
+    public void setLogger(Logger logger){ //@@l
+        this.logger=logger; //@@l
+    } //@@l
+
+    /**
+     *
+     * @param w The warning text to be logged
+     */
+    public void warn(String w){
+        logger.warn(w); //@@l
+        Dialog d;
+        if(BrowserProperties.gui){
+            d=new Dialog(resource.getString("warn"),new JLabel(w),
+                         Dialog.OKONLY);
+        }
+    }
+
+    /**
+     *
+     * @param w The info text to be logged
+     */
+    public void info(String w){
+        logger.info(w); //@@l
+        Dialog d;
+        //if(BrowserProperties.gui) d=new Dialog(resource.getString("info"),new JLabel(w),Dialog.OKONLY);
+    }
+
+    /**
+     *
+     * @param w The debugging text to be logged
+     */
+    public void debug(String w){
+        logger.debug(w); //@@l
+        Dialog d;
+        //if(BrowserProperties.gui) d=new Dialog(resource.getString("debug"),new JLabel(w),Dialog.OKONLY);
+    }
+
+    /**
+     *
+     * @param w The error text to be logged
+     */
+    public void error(String w){
+        logger.error(w); //@@l
+        Dialog d;
+        if(BrowserProperties.gui){
+            d=new Dialog(resource.getString("error"),new JLabel(w),
+                         Dialog.OKONLY);
+        }
+    }
+
+    /**
+     *
+     * @param w The fatal error text to be shown
+     */
+    public void fatal(String w){
+        logger.fatal(w); //@@l
+        Dialog d;
+        if(BrowserProperties.gui){
+            d=new Dialog(resource.getString("fatal"),new JLabel(w),
+                         Dialog.OKONLY);
+        }
+    }
+}
+
+
+/** Shutdown a browser */
+class ShutdownThread extends Thread{
+    private BrowserSD browser;
+    /**
+     * Creates a new thread to properly shutting down the MSD
+     * @param browser The BrowserSD to close
+     */
+    public ShutdownThread(BrowserSD browser){
+        this.browser=browser;
+    }
+
+    public void run(){
+        browser.finish();
+    }
+}
+
+
+/** Control panel of a network. */
+class NetworkPanel extends JPanel implements MSDListener{
+    private Network network=null;
+    private MSDManager msd=null;
+    private ResourceBundle lang=null;
+
+    private JLabel level,neighbors,main;
+
+    /**
+     * Creates a panel to show information about a network.
+     * @param net The network this panel shows information
+     * @param manager The MSDManager layer to control
+     * @param lang The Bundle to get the international texts from
+     */
+    public NetworkPanel(NetworkManager net,MSDManager manager,
+                        ResourceBundle lang){
+        network=manager.getMSD().getNetwork(net.getGenericName());
+        msd=manager;
+        this.lang=lang;
+        startComponents();
+
+        manager.addMSDListener(this);
+        new ShowInfo();
+    }
+
+    /** Start the components of the panel. */
+    private void startComponents(){
+        setBorder(new javax.swing.border.TitledBorder(network.getName()));
+        setLayout(new GridLayout(4,1));
+        level=new JLabel(lang.getString("level_is"));
+        neighbors=new JLabel(lang.getString("neighbors_are"));
+        main=new JLabel(lang.getString("main_is"));
+
+        add(level);
+        add(neighbors);
+        add(main);
+
+        JPanel p=new JPanel();
+        JButton b=new JButton(lang.getString("reinit_net"));
+        b.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e){
+                try{
+                    msd.reinit(network);
+                } catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            }
+        });
+        p.add(b);
+        b=new JButton(lang.getString("close_net"));
+        b.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e){
+                msd.finish(network);
+                new ShowInfo();
+            }
+        });
+        p.add(b);
+        b=new JButton(lang.getString("update_net"));
+        b.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e){
+                try{
+                    msd.search(network);
+                } catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            }
+        });
+        p.add(b);
+
+        add(p);
+    }
+
+    /** After any event from the manager and the network showed on this panel,
+     * change the information.*/
+    public void event(MSDEvent e){
+        new ShowInfo();
+    }
+
+    /** A thread for showing information */
+    private class ShowInfo implements Runnable{
+        public ShowInfo(){
+            (new Thread(this,"ShowInfo")).start();
+        }
+
+        public void run(){
+            // Change the info showed
+            NetworkManager net=(NetworkManager)msd.getNetworks().get(network.
+                    getName());
+            if(net==null){
+                main.setText(lang.getString("main_is"));
+                neighbors.setText(lang.getString("neighbors_are"));
+                level.setText(lang.getString("level_is")+" not know");
+            } else{
+                level.setText(lang.getString("level_is")+
+                              getLevelName(msd.getLevel(network.getName())));
+                main.setText(lang.getString("main_is")+net.getMSDMain());
+                String n=lang.getString("neighbors_are");
+                Object o[]=net.getNeighbors().keySet().toArray();
+                for(int i=0;i<o.length;i++){
+                    String s=(String)o[i]+", ";
+                    n+=", "+s;
+                }
+                neighbors.setText(n);
+            }
+        }
+    }
+
+
+    /** @param level The level.
+     * @return The name of the level.
+     */
+    private String getLevelName(int level){
+        switch(level){
+        case MessageManager.BROWSE:
+            return "BROWSE";
+        case MessageManager.UNDEF:
+            return "UNDEF";
+        case MessageManager.DISCOVER_MAIN:
+            return "DISCOVER_MAIN";
+        case MessageManager.ELECTION:
+            return "ELECTION";
+        case MessageManager.FINAL_UPDATE:
+            return "FINAL_UPDATE";
+        case MessageManager.INITIAL_UPDATE:
+            return "INITIAL_UPDATE";
+        case MessageManager.JOINING:
+            return "JOINING";
+        case MessageManager.LEAVING:
+            return "LEAVING";
+        case MessageManager.LEFT:
+            return "LEFT";
+        case MessageManager.UPDATE:
+            return "UPDATE";
+        case MessageManager.USE:
+            return "USE";
+        case MessageManager.WAIT_EVENT:
+            return "WAIT_EVENT";
+        default:
+            return ""+level;
+        }
+    }
+}

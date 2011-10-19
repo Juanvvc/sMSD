@@ -1,0 +1,1 @@
+slptool -s DEFAULT -l en register service:printer:lpr://hpc3lab003.upc.es:9100 "(printer-name=HPLab003),(printer-location=UPC North Campus. C-3. Lab 003),(printer-natural-language-configured=en),(printer-make-and-model=HP Laserjet 2100TN),(printer-color-supported=false),(printer-document-format-supported=text/plain,application/PostScript),(printer-comprension-supported=false)"
